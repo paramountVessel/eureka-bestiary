@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eureka Monster Spawn Tracker</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e24;
+            --text-color: #f5f5f5;
+            --accent: #bb86fc;
+            --input-bg: #2b2b36;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: var(--panel-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 450px;
+            position: relative; /* Needed for top-right info icon */
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+        }
+
+        /* --- Info Icon & Popup --- */
+        .info-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: var(--input-bg);
+            color: #aaa;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-family: serif;
+            cursor: pointer;
+            border: 1px solid #444;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .info-icon:hover {
+            color: white;
+            background-color: #3a3a48;
+            border-color: #666;
+        }
+
+        .info-popup {
+            display: none;
+            position: absolute;
+            top: 60px;
+            right: 10px;
+            background-color: #2b2b36;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            font-size: 0.85rem;
+            width: 200px;
+            z-index: 100;
+        }
+
+        .info-popup.show {
+            display: block;
+        }
+
+        .info-popup a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .info-popup a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- Region Button Styles --- */
+        .region-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .region-btn {
+            flex: 1;
+            padding: 10px 5px;
+            background-color: var(--input-bg);
+            color: #aaa;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0;
+        }
+
+        .region-btn:hover {
+            background-color: #3a3a48;
+            color: white;
+        }
+
+        .region-btn.active {
+            background-color: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background-color: var(--input-bg);
+            color: white;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        /* --- Day/Night Toggle Switch --- */
+        .time-toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            background-color: var(--input-bg);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .toggle-label {
+            font-weight: bold;
+            font-size: 0.95rem;
+            color: #888;
+            transition: color 0.3s;
+        }
+
+        .toggle-label.active {
+            color: white;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #f1c40f; /* Day Color (Yellow) */
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #34495e; /* Night Color (Dark Blue) */
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            background-color: #9965f4;
+        }
+
+        #resultBox {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .monster-card {
+            padding: 15px;
+            background-color: var(--input-bg);
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #444;
+        }
+
+        .monster-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .monster-region {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tags {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* Modifier Tags */
+        .tag.altered { background-color: #cf6679; color: white; }
+        .tag.modified { background-color: #03dac6; color: black; }
+        
+        /* Element Colors */
+        .element-fire { background-color: #ef5350; color: white; }
+        .element-water { background-color: #42a5f5; color: black; }
+        .element-earth { background-color: #d4e157; color: black; }
+        .element-wind { background-color: #66bb6a; color: black; }
+        .element-ice { background-color: #81d4fa; color: black; }
+        .element-thunder, .element-lighting { background-color: #ab47bc; color: white; } 
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="info-icon" onclick="toggleInfo()">i</div>
+    <div class="info-popup" id="infoPopup">
+        Credit to the original tracker by <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQVGPFzPmHY2qdngC-sZw9NOQuczsdd3Hf9GT4IL-_16s7o19QmsM6H8ciqHL6CU61XlfSoAkdIanN3/pubhtml#gid=1172002768" target="_blank" rel="noopener noreferrer">AbsoluteEse</a>.
+    </div>
+
+    <h1>Eureka Bestiary</h1>
+    
+    <div class="region-selector">
+        <button class="region-btn" id="btn-Pagos" onclick="selectRegion('Pagos')">Pagos</button>
+        <button class="region-btn active" id="btn-Pyros" onclick="selectRegion('Pyros')">Pyros</button>
+        <button class="region-btn" id="btn-Hydatos" onclick="selectRegion('Hydatos')">Hydatos</button>
+    </div>
+
+    <div class="form-group">
+        <label for="level">Player Level</label>
+        <input type="number" id="level" min="1">
+    </div>
+
+    <div class="form-group">
+        <label for="weather">Weather</label>
+        <select id="weather">
+            </select>
+    </div>
+
+    <div class="form-group">
+        <label>Time of Day</label>
+        <div class="time-toggle-container">
+            <span class="toggle-label active" id="label-day">Day</span>
+            <label class="switch">
+                <input type="checkbox" id="time-toggle" onchange="updateTimeLabels()">
+                <span class="slider"></span>
+            </label>
+            <span class="toggle-label" id="label-night">Night</span>
+        </div>
+    </div>
+
+    <button class="submit-btn" onclick="findMonster()">Find Spawns</button>
+
+    <div id="resultBox">
+        <div class="monster-card" style="color: #aaa; border: none;">Enter details above to find spawns.</div>
+    </div>
+</div>
+
+<script>
+    // Info Icon Logic
+    function toggleInfo() {
+        document.getElementById('infoPopup').classList.toggle('show');
+    }
+
+    // Close popup if user clicks outside of it
+    window.onclick = function(event) {
+        if (!event.target.matches('.info-icon') && !event.target.closest('.info-popup')) {
+            document.getElementById('infoPopup').classList.remove('show');
+        }
+    }
+
+    // Time Toggle Logic
+    function updateTimeLabels() {
+        const isNight = document.getElementById('time-toggle').checked;
+        if (isNight) {
+            document.getElementById('label-day').classList.remove('active');
+            document.getElementById('label-night').classList.add('active');
+        } else {
+            document.getElementById('label-night').classList.remove('active');
+            document.getElementById('label-day').classList.add('active');
+        }
+    }
+
+    // Region variables
+    let currentRegion = "Pyros"; // Default region
+
+    const regionWeather = {
+        "Pagos": ["Fair", "Heat", "Snow", "Blizz", "Thunder", "Fog"],
+        "Pyros": ["Fair", "Heat", "Snow", "Blizz", "Thunder", "Wind"],
+        "Hydatos": ["Fair", "Showers", "Snow", "Thunder", "Gloom"]
+    };
+
+    const regionLevelRanges = {
+        "Pagos": { min: 20, max: 40 },
+        "Pyros": { min: 35, max: 55 },
+        "Hydatos": { min: 50, max: 63 }
+    };
+
+    function selectRegion(region) {
+        currentRegion = region;
+        
+        // 1. Update active button styles
+        document.querySelectorAll('.region-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`btn-${region}`).classList.add('active');
+
+        // 2. Clear and update weather options
+        const weatherSelect = document.getElementById('weather');
+        weatherSelect.innerHTML = '';
+        regionWeather[region].forEach(weather => {
+            const option = document.createElement('option');
+            option.value = weather;
+            option.textContent = weather;
+            weatherSelect.appendChild(option);
+        });
+
+        // 3. Update the level input placeholder
+        const range = regionLevelRanges[region];
+        const levelInput = document.getElementById('level');
+        levelInput.placeholder = `Enter level (${range.min}-${range.max})...`;
+        
+        // Optionally clear results when region changes
+        document.getElementById('resultBox').innerHTML = '<div class="monster-card" style="color: #aaa; border: none;">Enter details above to find spawns.</div>';
+    }
+
+    // Initialize region specifics on page load
+    selectRegion(currentRegion);
+
+    const spawnDatabase = [
+        // === PYROS DATA (Complete) ===
+        {"region": "Pyros", "levelMin": 35, "levelMax": 35, "weather": "Thunder", "time": "Any", "monster": "Spriggan Pankratiast", "isAltered": false, "isModified": true, "element": "thunder"},
+        {"region": "Pyros", "levelMin": 35, "levelMax": 35, "weather": "Any", "time": "Any", "monster": "Walking Sapling", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 36, "levelMax": 36, "weather": "Any", "time": "Day", "monster": "Northern Griffin", "isAltered": false, "isModified": true, "element": "ice"},
+        {"region": "Pyros", "levelMin": 36, "levelMax": 36, "weather": "Any", "time": "Any", "monster": "Val Icetrap", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 37, "levelMax": 37, "weather": "Any", "time": "Any", "monster": "Gibbon", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 37, "levelMax": 37, "weather": "Any", "time": "Night", "monster": "Pyros Slug", "isAltered": false, "isModified": true, "element": "wind"},
+        {"region": "Pyros", "levelMin": 38, "levelMax": 38, "weather": "Any", "time": "Any", "monster": "Cardian", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 38, "levelMax": 38, "weather": "Fair", "time": "Any", "monster": "The Defoliator", "isAltered": false, "isModified": true, "element": "wind"},
+        {"region": "Pyros", "levelMin": 39, "levelMax": 39, "weather": "Heat", "time": "Any", "monster": "Pyros Gremlin", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pyros", "levelMin": 39, "levelMax": 39, "weather": "Any", "time": "Any", "monster": "Voidskipper", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 40, "levelMax": 40, "weather": "Thunder", "time": "Any", "monster": "Mega-gris", "isAltered": false, "isModified": true, "element": "lighting"},
+        {"region": "Pyros", "levelMin": 40, "levelMax": 40, "weather": "Any", "time": "Any", "monster": "Mechanoguardian", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 40, "levelMax": 40, "weather": "Wind", "time": "Any", "monster": "Haokah Unbound", "isAltered": false, "isModified": true, "element": "lighting"},
+        {"region": "Pyros", "levelMin": 41, "levelMax": 41, "weather": "Any", "time": "Any", "monster": "Pyros Chelone", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 41, "levelMax": 41, "weather": "Any", "time": "Day", "monster": "Blazewing", "isAltered": false, "isModified": true, "element": "none"},
+        {"region": "Pyros", "levelMin": 41, "levelMax": 41, "weather": "Any", "time": "Any", "monster": "Wasserspeier", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Pyros", "levelMin": 42, "levelMax": 42, "weather": "Heat", "time": "Any", "monster": "Hippomartimus", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pyros", "levelMin": 42, "levelMax": 42, "weather": "Any", "time": "Any", "monster": "Val Mammoth", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 42, "levelMax": 42, "weather": "Any", "time": "Night", "monster": "Val Wraith", "isAltered": false, "isModified": true, "element": "lighting"},
+        {"region": "Pyros", "levelMin": 43, "levelMax": 43, "weather": "Blizz", "time": "Any", "monster": "Machairodus", "isAltered": false, "isModified": true, "element": "ice"},
+        {"region": "Pyros", "levelMin": 43, "levelMax": 43, "weather": "Fair", "time": "Any", "monster": "Pyros Snake", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pyros", "levelMin": 44, "levelMax": 44, "weather": "Wind", "time": "Any", "monster": "Red Eye", "isAltered": false, "isModified": true, "element": "wind"},
+        {"region": "Pyros", "levelMin": 44, "levelMax": 44, "weather": "Any", "time": "Any", "monster": "Val Yeti", "isAltered": false, "isModified": true, "element": "ice"},
+        {"region": "Pyros", "levelMin": 45, "levelMax": 45, "weather": "Any", "time": "Day", "monster": "Clipper", "isAltered": false, "isModified": true, "element": "water"},
+        {"region": "Pyros", "levelMin": 45, "levelMax": 45, "weather": "Fair", "time": "Any", "monster": "Northern Ray", "isAltered": false, "isModified": true, "element": "lighting"},
+        {"region": "Pyros", "levelMin": 45, "levelMax": 45, "weather": "Any", "time": "Any", "monster": "Karlabos of Pyros", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 46, "levelMax": 46, "weather": "Heat", "time": "Any", "monster": "Pyros Bombfish", "isAltered": false, "isModified": true, "element": "lighting"},
+        {"region": "Pyros", "levelMin": 46, "levelMax": 46, "weather": "Blizz", "time": "Any", "monster": "Pyros Pudding", "isAltered": false, "isModified": true, "element": "water"},
+        {"region": "Pyros", "levelMin": 47, "levelMax": 47, "weather": "Any", "time": "Any", "monster": "Pyros Nanka", "isAltered": false, "isModified": true, "element": "ice"},
+        {"region": "Pyros", "levelMin": 47, "levelMax": 47, "weather": "Any", "time": "Night", "monster": "Pyros Gulo Gulo", "isAltered": false, "isModified": true, "element": "lighting"},
+        {"region": "Pyros", "levelMin": 47, "levelMax": 47, "weather": "Any", "time": "Night", "monster": "Pyros Parthenope", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 48, "levelMax": 48, "weather": "Wind", "time": "Any", "monster": "Pure White Flame", "isAltered": false, "isModified": true, "element": "ice"},
+        {"region": "Pyros", "levelMin": 48, "levelMax": 48, "weather": "Any", "time": "Day", "monster": "Dingo", "isAltered": false, "isModified": true, "element": "wind"},
+        {"region": "Pyros", "levelMin": 49, "levelMax": 49, "weather": "Thunder", "time": "Night", "monster": "Dark Parthenope", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pyros", "levelMin": 49, "levelMax": 49, "weather": "Any", "time": "Any", "monster": "Pyros Slime", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 49, "levelMax": 49, "weather": "Fair", "time": "Any", "monster": "Northern Grizzly", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Pyros", "levelMin": 50, "levelMax": 50, "weather": "Any", "time": "Night", "monster": "Delphyne", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pyros", "levelMin": 50, "levelMax": 50, "weather": "Any", "time": "Night", "monster": "Pyros Piranu", "isAltered": false, "isModified": true, "element": "water"},
+        {"region": "Pyros", "levelMin": 50, "levelMax": 50, "weather": "Any", "time": "Any", "monster": "Pyros Hawk", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 51, "levelMax": 51, "weather": "Any", "time": "Night", "monster": "Delphyne", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 51, "levelMax": 51, "weather": "Snow", "time": "Any", "monster": "Pyros Wood Golem", "isAltered": false, "isModified": true, "element": "lighting"},
+        {"region": "Pyros", "levelMin": 51, "levelMax": 51, "weather": "Any", "time": "Day", "monster": "Henbane", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Pyros", "levelMin": 52, "levelMax": 52, "weather": "Thunder", "time": "Any", "monster": "Val Minotaur", "isAltered": false, "isModified": true, "element": "lighting"},
+        {"region": "Pyros", "levelMin": 52, "levelMax": 52, "weather": "Heat", "time": "Any", "monster": "Val Hornbill", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pyros", "levelMin": 53, "levelMax": 53, "weather": "Fair", "time": "Any", "monster": "Stegoceras", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pyros", "levelMin": 53, "levelMax": 53, "weather": "Any", "time": "Night", "monster": "Fabricated Singha", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Pyros", "levelMin": 53, "levelMax": 53, "weather": "Any", "time": "Night", "monster": "Soulless Agent", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 54, "levelMax": 54, "weather": "Snow", "time": "Any", "monster": "Zebu", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Pyros", "levelMin": 54, "levelMax": 54, "weather": "Any", "time": "Any", "monster": "Ancient Voidragon", "isAltered": false, "isModified": true, "element": "water"},
+        {"region": "Pyros", "levelMin": 55, "levelMax": 55, "weather": "Any", "time": "Any", "monster": "Flame Voidragon", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pyros", "levelMin": 55, "levelMax": 55, "weather": "Wind", "time": "Any", "monster": "Val Gigantopithecus", "isAltered": false, "isModified": true, "element": "wind"},
+        {"region": "Pyros", "levelMin": 55, "levelMax": 55, "weather": "Thunder", "time": "Night", "monster": "Soulless Pathfinder", "isAltered": false, "isModified": true, "element": "fire"},
+        
+        // === HYDATOS DATA ===
+        {"region": "Hydatos", "levelMin": 50, "levelMax": 50, "weather": "Any", "time": "Any", "monster": "Eurekan deathgaze", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Hydatos", "levelMin": 50, "levelMax": 50, "weather": "Any", "time": "Night", "monster": "Val nanka", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Hydatos", "levelMin": 51, "levelMax": 51, "weather": "Any", "time": "Any", "monster": "Hydatos Pudding", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Hydatos", "levelMin": 51, "levelMax": 51, "weather": "Any", "time": "Night", "monster": "Laboratory Coeurl", "isAltered": false, "isModified": true, "element": "wind"},
+        {"region": "Hydatos", "levelMin": 53, "levelMax": 53, "weather": "Any", "time": "Night", "monster": "Hydatos Grenade", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Hydatos", "levelMin": 59, "levelMax": 59, "weather": "Any", "time": "Day", "monster": "Bloodglider Dreadnaught", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Hydatos", "levelMin": 59, "levelMax": 59, "weather": "Any", "time": "Day", "monster": "Shugen Tengu", "isAltered": false, "isModified": true, "element": "water"},
+        {"region": "Hydatos", "levelMin": 60, "levelMax": 60, "weather": "Any", "time": "Day", "monster": "Gorpokkur", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Hydatos", "levelMin": 61, "levelMax": 61, "weather": "Any", "time": "Any", "monster": "Hydatos squib", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Hydatos", "levelMin": 61, "levelMax": 61, "weather": "Any", "time": "Night", "monster": "Val Mole", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Hydatos", "levelMin": 63, "levelMax": 63, "weather": "Any", "time": "Any", "monster": "Zu Nestling", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Hydatos", "levelMin": 64, "levelMax": 64, "weather": "Any", "time": "Night", "monster": "Dark Gargoyle", "isAltered": false, "isModified": true, "element": "none"},
+
+        // === PAGOS DATA ===
+        {"region": "Pagos", "levelMin": 20, "levelMax": 20, "weather": "Any", "time": "Any", "monster": "Sylvestre", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pagos", "levelMin": 20, "levelMax": 20, "weather": "Any", "time": "Night", "monster": "Pagos Deepeye", "isAltered": false, "isModified": true, "element": "ice"},
+        {"region": "Pagos", "levelMin": 21, "levelMax": 21, "weather": "Any", "time": "Day", "monster": "Val Galago", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Pagos", "levelMin": 21, "levelMax": 21, "weather": "Any", "time": "Any", "monster": "Northern Fluturini", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pagos", "levelMin": 22, "levelMax": 22, "weather": "Any", "time": "Any", "monster": "Snow Slug", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pagos", "levelMin": 22, "levelMax": 22, "weather": "Any", "time": "Any", "monster": "Val Banemite", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pagos", "levelMin": 23, "levelMax": 23, "weather": "Any", "time": "Any", "monster": "Val Mole", "isAltered": false, "isModified": true, "element": "fire"},
+        {"region": "Pagos", "levelMin": 32, "levelMax": 32, "weather": "Any", "time": "Any", "monster": "Pagos Hippocerf", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pagos", "levelMin": 32, "levelMax": 32, "weather": "Any", "time": "Day", "monster": "Decotitus", "isAltered": false, "isModified": true, "element": "earth"},
+        {"region": "Pagos", "levelMin": 33, "levelMax": 33, "weather": "Any", "time": "Any", "monster": "Val Keeper", "isAltered": true, "isModified": false, "element": "none"},
+        {"region": "Pagos", "levelMin": 34, "levelMax": 34, "weather": "Any", "time": "Day", "monster": "Frozen Aevis", "isAltered": false, "isModified": true, "element": "wind"},
+        {"region": "Pagos", "levelMin": 35, "levelMax": 35, "weather": "Any", "time": "Day", "monster": "Valley Manticore", "isAltered": false, "isModified": true, "element": "wind"},
+        {"region": "Pagos", "levelMin": 36, "levelMax": 36, "weather": "Any", "time": "Night", "monster": "Blizzard Goobbue", "isAltered": false, "isModified": true, "element": "water"}
+    ];
+
+    function findMonster() {
+        const level = parseInt(document.getElementById('level').value);
+        const weather = document.getElementById('weather').value;
+        
+        // Read time from the toggle switch (checked = Night, unchecked = Day)
+        const isNight = document.getElementById('time-toggle').checked;
+        const time = isNight ? "Night" : "Day";
+        
+        const resultBox = document.getElementById('resultBox');
+
+        // Clear previous results
+        resultBox.innerHTML = '';
+
+        if (isNaN(level)) {
+            resultBox.innerHTML = '<div class="monster-card" style="color: #cf6679;">Please enter a valid level.</div>';
+            return;
+        }
+
+        // Validate Level Range based on Selected Region
+        const range = regionLevelRanges[currentRegion];
+        if (level < range.min || level > range.max) {
+            resultBox.innerHTML = `
+                <div class="monster-card" style="color: #cf6679; border-color: #cf6679;">
+                    Error: Please enter a level between ${range.min} and ${range.max} for ${currentRegion}.
+                </div>`;
+            return;
+        }
+
+        // Filter the database for ALL matches
+        const matches = spawnDatabase.filter(spawn => {
+            const regionMatch = spawn.region === currentRegion;
+            const levelMatch = level >= spawn.levelMin && level <= spawn.levelMax;
+            const weatherMatch = spawn.weather === "Any" || spawn.weather === weather;
+            const timeMatch = spawn.time === "Any" || spawn.time === time;
+            
+            return regionMatch && levelMatch && weatherMatch && timeMatch;
+        });
+
+        // Render results
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                let tagsHtml = '';
+                
+                if (match.isAltered) {
+                    tagsHtml += '<span class="tag altered">A - Adaptation</span>';
+                }
+                if (match.isModified) {
+                    tagsHtml += `<span class="tag modified">M - Mutation</span>`;
+                    
+                    if (match.element !== "none") {
+                        tagsHtml += `<span class="tag element-${match.element}">${match.element}</span>`;
+                    }
+                }
+
+                // Create the card
+                const card = document.createElement('div');
+                card.className = 'monster-card';
+                card.innerHTML = `
+                    <div class="monster-region">${match.region} - Level ${match.levelMin}</div>
+                    <div class="monster-name">${match.monster}</div>
+                    <div class="tags">${tagsHtml}</div>
+                `;
+                resultBox.appendChild(card);
+            });
+        } else {
+            resultBox.innerHTML = '<div class="monster-card" style="color: #aaa;">No monsters found for these conditions.</div>';
+        }
+    }
+</script>
+
+</body>
+</html>
